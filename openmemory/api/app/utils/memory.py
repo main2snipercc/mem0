@@ -232,6 +232,7 @@ def get_default_memory_config():
         vector_store_provider = "qdrant"
         vector_store_config.update({
             "port": 6333,
+            "embedding_model_dims": 1024,  # BGE-M3 model dimension
         })
     
     print(f"Auto-detected vector store: {vector_store_provider} with config: {vector_store_config}")
@@ -244,17 +245,19 @@ def get_default_memory_config():
         "llm": {
             "provider": "openai",
             "config": {
-                "model": "gpt-4o-mini",
+                "model": "Pro/deepseek-ai/DeepSeek-V3.1",
                 "temperature": 0.1,
                 "max_tokens": 2000,
-                "api_key": "env:OPENAI_API_KEY"
+                "api_key": "env:SILICONFLOW_API_KEY",
+                "openai_base_url": "https://api.siliconflow.cn/v1"
             }
         },
         "embedder": {
             "provider": "openai",
             "config": {
-                "model": "text-embedding-3-small",
-                "api_key": "env:OPENAI_API_KEY"
+                "model": "BAAI/bge-m3",
+                "api_key": "env:SILICONFLOW_API_KEY",
+                "openai_base_url": "https://api.siliconflow.cn/v1"
             }
         },
         "version": "v1.1"

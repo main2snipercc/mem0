@@ -1,4 +1,5 @@
 import logging
+import os
 from typing import List
 
 from app.utils.prompts import MEMORY_CATEGORIZATION_PROMPT
@@ -8,7 +9,10 @@ from pydantic import BaseModel
 from tenacity import retry, stop_after_attempt, wait_exponential
 
 load_dotenv()
-openai_client = OpenAI()
+# Use SILICONFLOW_API_KEY if available, otherwise fall back to OPENAI_API_KEY
+api_key = os.getenv("SILICONFLOW_API_KEY") or os.getenv("OPENAI_API_KEY")
+base_url = "https://api.siliconflow.cn/v1" if os.getenv("SILICONFLOW_API_KEY") else None
+openai_client = OpenAI(api_key=api_key, base_url=base_url)
 
 
 class MemoryCategories(BaseModel):
@@ -24,8 +28,9 @@ def get_categories_for_memory(memory: str) -> List[str]:
         ]
 
         # Let OpenAI handle the pydantic parsing directly
+        model_name = "Pro/deepseek-ai/DeepSeek-V3.1" if os.getenv("SILICONFLOW_API_KEY") else "gpt-4o-mini"
         completion = openai_client.beta.chat.completions.parse(
-            model="gpt-4o-mini",
+            model=model_name,
             messages=messages,
             response_format=MemoryCategories,
             temperature=0
