@@ -13,7 +13,7 @@
         "embedder": {
             "provider": "openai",
             "config": {
-                "model": "BAAI/bge-m3",
+                "model": "Pro/BAAI/bge-m3",
                 "api_key": "env:SILICONFLOW_API_KEY",
                 "openai_base_url": "https://api.siliconflow.cn/v1"
             }

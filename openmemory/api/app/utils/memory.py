@@ -331,6 +331,12 @@ def get_memory_client(custom_instructions: str = None):
                     if "llm" in mem0_config and mem0_config["llm"] is not None:
                         config["llm"] = mem0_config["llm"]
                         
+                        # OpenAI base URL is already correct for Mem0 compatibility
+                        if config["llm"].get("provider") == "openai" and "config" in config["llm"]:
+                            llm_config = config["llm"]["config"]
+                            if "openai_base_url" in llm_config:
+                                print(f"Using LLM openai_base_url: {llm_config['openai_base_url']}")
+                        
                         # Fix Ollama URLs for Docker if needed
                         if config["llm"].get("provider") == "ollama":
                             config["llm"] = _fix_ollama_urls(config["llm"])
@@ -338,6 +344,13 @@ def get_memory_client(custom_instructions: str = None):
                     # Update Embedder configuration if available
                     if "embedder" in mem0_config and mem0_config["embedder"] is not None:
                         config["embedder"] = mem0_config["embedder"]
+                        
+                        # Fix OpenAI base URL field name for Mem0 compatibility
+                        if config["embedder"].get("provider") == "openai" and "config" in config["embedder"]:
+                            embedder_config = config["embedder"]["config"]
+                            if "openai_base_url" in embedder_config:
+                                # For embedder, use openai_base_url directly (not base_url)
+                                print(f"Using embedder openai_base_url: {embedder_config['openai_base_url']}")
                         
                         # Fix Ollama URLs for Docker if needed
                         if config["embedder"].get("provider") == "ollama":

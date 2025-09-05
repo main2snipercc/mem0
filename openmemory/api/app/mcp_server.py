@@ -38,13 +38,43 @@ load_dotenv()
 # Initialize MCP
 mcp = FastMCP("mem0-mcp-server")
 
-# Don't initialize memory client at import time - do it lazily when needed
+# Pre-initialize memory client at startup to avoid MCP session timeout
+try:
+    from app.utils.memory import get_memory_client
+    import threading
+    import time
+    
+    def pre_init_memory_client():
+        """Pre-initialize memory client in background thread"""
+        try:
+            logging.info("Pre-initializing memory client in background...")
+            get_memory_client()
+            logging.info("Memory client pre-initialized successfully")
+        except Exception as e:
+            logging.warning(f"Failed to pre-initialize memory client: {e}")
+    
+    # Start pre-initialization in background thread
+    init_thread = threading.Thread(target=pre_init_memory_client, daemon=True)
+    init_thread.start()
+    
+except Exception as e:
+    logging.warning(f"Failed to start memory client pre-initialization: {e}")
+
+# Pre-initialize memory client to avoid MCP session timeout
+_memory_client_initialized = False
+
 def get_memory_client_safe():
     """Get memory client with error handling. Returns None if client cannot be initialized."""
+    global _memory_client_initialized
     try:
+        if not _memory_client_initialized:
+            # Pre-initialize memory client to avoid timeout during MCP session
+            client = get_memory_client()
+            _memory_client_initialized = True
+            logging.info("Memory client pre-initialized successfully")
         return get_memory_client()
     except Exception as e:
-        logging.warning(f"Failed to get memory client: {e}")
+        logging.error(f"Failed to get memory client: {e}", exc_info=True)
         return None
 
 # Context variables for user_id and client_name
@@ -85,7 +115,7 @@ async def add_memories(text: str) -> str:
             response = memory_client.add(text,
                                          user_id=uid,
                                          metadata={
-                                            "source_app": "openmemory",
+                                            "source_app": client_name,
                                             "mcp_client": client_name,
                                         })
 
@@ -133,7 +163,11 @@ async def add_memories(text: str) -> str:
 
                 db.commit()
 
-            return response
+            # Convert response to string format for MCP compatibility
+            if isinstance(response, dict):
+                return json.dumps(response, indent=2)
+            else:
+                return str(response)
         finally:
             db.close()
     except Exception as e:

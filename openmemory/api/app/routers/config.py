@@ -15,6 +15,7 @@ class LLMConfig(BaseModel):
     max_tokens: int = Field(..., description="Maximum tokens to generate")
     api_key: Optional[str] = Field(None, description="API key or 'env:API_KEY' to use environment variable")
     ollama_base_url: Optional[str] = Field(None, description="Base URL for Ollama server (e.g., http://host.docker.internal:11434)")
+    openai_base_url: Optional[str] = Field(None, description="Base URL for OpenAI-compatible API (e.g., https://api.siliconflow.cn/v1)")
 
 class LLMProvider(BaseModel):
     provider: str = Field(..., description="LLM provider name")
@@ -24,6 +25,7 @@ class EmbedderConfig(BaseModel):
     model: str = Field(..., description="Embedder model name")
     api_key: Optional[str] = Field(None, description="API key or 'env:API_KEY' to use environment variable")
     ollama_base_url: Optional[str] = Field(None, description="Base URL for Ollama server (e.g., http://host.docker.internal:11434)")
+    openai_base_url: Optional[str] = Field(None, description="Base URL for OpenAI-compatible API (e.g., https://api.siliconflow.cn/v1)")
 
 class EmbedderProvider(BaseModel):
     provider: str = Field(..., description="Embedder provider name")
@@ -139,10 +141,10 @@ async def update_configuration(config: ConfigSchema, db: Session = Depends(get_d
     if config.openmemory is not None:
         if "openmemory" not in updated_config:
             updated_config["openmemory"] = {}
-        updated_config["openmemory"].update(config.openmemory.dict(exclude_none=True))
+        updated_config["openmemory"].update(config.openmemory.model_dump(exclude_none=True))
     
     # Update mem0 settings
-    updated_config["mem0"] = config.mem0.dict(exclude_none=True)
+    updated_config["mem0"] = config.mem0.model_dump(exclude_none=True)
     
     # Save the configuration to database
     save_config_to_db(db, updated_config)
@@ -183,7 +185,7 @@ async def update_llm_configuration(llm_config: LLMProvider, db: Session = Depend
         current_config["mem0"] = {}
     
     # Update the LLM configuration
-    current_config["mem0"]["llm"] = llm_config.dict(exclude_none=True)
+    current_config["mem0"]["llm"] = llm_config.model_dump(exclude_none=True)
     
     # Save the configuration to database
     save_config_to_db(db, current_config)
@@ -207,7 +209,7 @@ async def update_embedder_configuration(embedder_config: EmbedderProvider, db: S
         current_config["mem0"] = {}
     
     # Update the Embedder configuration
-    current_config["mem0"]["embedder"] = embedder_config.dict(exclude_none=True)
+    current_config["mem0"]["embedder"] = embedder_config.model_dump(exclude_none=True)
     
     # Save the configuration to database
     save_config_to_db(db, current_config)
@@ -231,7 +233,7 @@ async def update_openmemory_configuration(openmemory_config: OpenMemoryConfig, d
         current_config["openmemory"] = {}
     
     # Update the OpenMemory configuration
-    current_config["openmemory"].update(openmemory_config.dict(exclude_none=True))
+    current_config["openmemory"].update(openmemory_config.model_dump(exclude_none=True))
     
     # Save the configuration to database
     save_config_to_db(db, current_config)
