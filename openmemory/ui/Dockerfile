@@ -3,8 +3,8 @@
 # Base stage for common setup
 FROM node:18-alpine AS base
 
-# Install dependencies for pnpm
-RUN apk add --no-cache libc6-compat curl && \
+# Install dependencies for pnpm and dos2unix for line ending conversion
+RUN apk add --no-cache libc6-compat curl dos2unix && \
     corepack enable && \
     corepack prepare pnpm@latest --activate
 
@@ -40,7 +40,7 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
 COPY --chown=nextjs:nodejs entrypoint.sh /home/nextjs/entrypoint.sh
-RUN chmod +x /home/nextjs/entrypoint.sh
+RUN dos2unix /home/nextjs/entrypoint.sh && chmod +x /home/nextjs/entrypoint.sh
 
 USER nextjs
 

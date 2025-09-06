@@ -24,7 +24,7 @@ services:
       dockerfile: Dockerfile
     image: mem0/openmemory-ui:latest
     ports:
-      - "3000:3000"
+      - "3333:3000"
     env_file:
       - ui/.env
 

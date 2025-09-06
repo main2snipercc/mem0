@@ -1,0 +1,75 @@
+# 多阶段构建的生产环境Dockerfile
+FROM node:18-alpine AS base
+
+# 安装系统依赖
+RUN apk add --no-cache libc6-compat curl dos2unix
+
+# 启用pnpm
+RUN corepack enable && corepack prepare pnpm@latest --activate
+
+WORKDIR /app
+
+# 依赖安装阶段
+FROM base AS deps
+COPY package.json pnpm-lock.yaml ./
+RUN pnpm install --frozen-lockfile --prod
+
+# 构建阶段
+FROM base AS builder
+WORKDIR /app
+
+# 复制依赖
+COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app/pnpm-lock.yaml ./pnpm-lock.yaml
+
+# 复制源代码
+COPY . .
+
+# 复制配置文件
+RUN cp next.config.dev.mjs next.config.mjs
+
+# 创建环境变量文件
+RUN echo "NEXT_PUBLIC_API_URL=http://localhost:8765" > .env && \
+    echo "NEXT_PUBLIC_USER_ID=default_user" >> .env
+
+# 构建应用
+RUN pnpm build
+
+# 生产环境镜像
+FROM node:18-alpine AS production
+
+# 安装运行时依赖
+RUN apk add --no-cache curl
+
+# 创建非root用户
+RUN addgroup --system --gid 1001 nodejs && \
+    adduser --system --uid 1001 nextjs
+
+WORKDIR /app
+
+# 设置环境变量
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+
+# 复制构建产物
+COPY --from=builder /app/public ./public
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+
+# 复制启动脚本
+COPY --chown=nextjs:nodejs entrypoint.sh /home/nextjs/entrypoint.sh
+RUN dos2unix /home/nextjs/entrypoint.sh && chmod +x /home/nextjs/entrypoint.sh
+
+# 切换到非root用户
+USER nextjs
+
+# 暴露端口
+EXPOSE 3000
+
+# 健康检查
+HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:3000/api/health || exit 1
+
+# 启动命令
+ENTRYPOINT ["/home/nextjs/entrypoint.sh"]
+CMD ["node", "server.js"]
